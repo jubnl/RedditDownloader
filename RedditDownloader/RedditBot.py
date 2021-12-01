@@ -19,9 +19,6 @@ class RedditBot:
         :param save_path: A string or pathlike to a folder where images and data will be downloaded (cwd by default).
         """
 
-        # init YoutubeBot class
-        super().__init__()
-
         self.log = log
 
         # connect to reddit
