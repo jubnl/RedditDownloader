@@ -162,7 +162,7 @@ class RedditBot(Scale, CreateMovie, YtbPublisher):
                 new directory with resized images. True by default
         :return: data queried
         """
-
+        self.__submission_data = []
         for subreddit in subreddits:
             save_path = self.__create_subreddit_folder(subreddit)
             if self._log:
@@ -190,24 +190,26 @@ class RedditBot(Scale, CreateMovie, YtbPublisher):
         """
         return self._create_video(video_data if video_data else self.__submission_data)
 
-    @staticmethod
-    def get_path_images(data: List[dict] = None):
+    def get_path_images(self, data: List[dict] = None):
         """Return a list oh paths for the data passed
 
-        :param data: data queried with .save_images_from_subreddit()
+        :param data: optional data queried with .save_images_from_subreddit()
         :return: a list of path
         """
+        if not data:
+            data = self.__submission_data
         return [i["image_path"] for i in data]
 
-    def publish_on(self, social_media: int, media_path: str) -> None:
+    def publish_on(self, social_media: int, media_data: List[dict]) -> None:
         """Publish a video or an image on a social media
 
         :param social_media: use utils.SocialMedias.TheSocialMediaYouWant
-        :param media_path: path to image an image or a video
+        :param media_data: dict that contains data about an image. It can be found in "{base_path}/data/{today}/{subreddit}/data/"
         :return: None
         """
         if social_media == 0:
-            self._youtube(media_path)
+            for data in media_data:
+                self._youtube(data)
             return
 
         if social_media == 1:
