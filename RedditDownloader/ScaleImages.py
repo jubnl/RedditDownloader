@@ -3,7 +3,7 @@ import os
 from PIL import Image
 
 
-class Scale:
+class Scale(object):
     def __init__(self):
         pass
 

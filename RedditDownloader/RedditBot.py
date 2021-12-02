@@ -7,22 +7,26 @@ import praw
 import requests
 from environs import Env
 
+from MovieMaker import CreateMovie
+from Publishers import YtbPublisher
 from .ScaleImages import Scale
 
 
-class RedditBot(Scale):
-    def __init__(self, env: Env, save_path=os.getcwd(), log: bool = False) -> None:
+class RedditBot(Scale, CreateMovie, YtbPublisher):
+    def __init__(self, env: Env, base_path=os.getcwd(), log: bool = False) -> None:
         """Reddit downloader class
 
         :param env: environs.Env object that already has been initialized. You can use utils.get_credentials() for that.
         :param log: True to log operations in console, by default to False.
-        :param save_path: A string or pathlike to a folder where images and data will be downloaded (cwd by default).
+        :param base_path: A string or pathlike to a folder where images and data will be downloaded (cwd by default).
         """
 
-        # init Scale class
-        super(Scale).__init__()
+        # init parent classes
+        Scale.__init__(self)
+        CreateMovie.__init__(self, base_path)
+        YtbPublisher.__init__(self)
 
-        self.__log = log
+        self._log = log
 
         # connect to reddit
         self.__reddit = praw.Reddit(
@@ -35,13 +39,16 @@ class RedditBot(Scale):
         self.__accepted_format = ["jpg", "png", "gif"]
 
         # define a path with folder that has today's date
-        self.__today_data_path = os.path.join(save_path, f"data\\{date.today().strftime('%m%d%Y')}\\")
+        self.__today_data_path = os.path.join(base_path, f"data\\{date.today().strftime('%m%d%Y')}\\")
 
         # define path to utility file like already_downloaded.json
-        self.__already_downloaded_path = os.path.join(save_path, f"data/utils/")
+        self.__already_downloaded_path = os.path.join(base_path, f"data/utils/")
 
         # define file name for already downloaded images
         self.__already_downloaded_json = "already_downloaded.json"
+
+        # store downloaded data in a single list
+        self.__submission_data = []
 
         # create already_downloaded.json if not exists
         if not os.path.isdir(self.__already_downloaded_path):
@@ -50,11 +57,12 @@ class RedditBot(Scale):
                 pass
 
         # load json file to class
-        with open(file=f"{self.__already_downloaded_path}{self.__already_downloaded_json}", mode="r") as f:
+        with open(file=f"{self.__already_downloaded_path}{self.__already_downloaded_json}", mode="r",
+                  encoding="utf-8-sig") as f:
             try:
-                self._already_downloaded = json.load(f)
-            except json.decoder.JSONDecodeError:
-                self._already_downloaded = []
+                self.__already_downloaded = json.loads(f.read())
+            except json.decoder.JSONDecodeError as e:
+                self.__already_downloaded = []
 
     def __create_subreddit_folder(self, subreddit: str) -> str:
 
@@ -71,7 +79,7 @@ class RedditBot(Scale):
         submissions = []
         for submission in self.__reddit.subreddit(subreddit).top("day", limit=1000):
             if not submission.stickied and submission.url.lower()[-3:] in accepted_format and \
-                    submission.over_18 == over_18 and submission.id not in self._already_downloaded:
+                    submission.over_18 == over_18 and submission.id not in self.__already_downloaded:
                 submissions.append(submission)
             if len(submissions) >= amount:
                 break
@@ -83,8 +91,11 @@ class RedditBot(Scale):
         img = requests.get(submission.url.lower())
         with open(save_path, "wb") as f:
             f.write(img.content)
-
+        if self._log:
+            print("Image downloaded.")
         if scale:
+            if self._log:
+                print("Resizing image...")
             self._scale_image(save_path, scale, replace_resized)
 
     def __save_submission_data(self, save_path: str, image_path: str,
@@ -125,46 +136,89 @@ class RedditBot(Scale):
             "best_reply": best_reply
         }
 
-        self._already_downloaded.append(submission.id)
+        self.__already_downloaded.append(submission.id)
+        self.__submission_data.append(submission_data)
         with open(f"{self.__already_downloaded_path}{self.__already_downloaded_json}", mode="w",
                   encoding="utf-8-sig") as f:
-            json.dump(self._already_downloaded, f)
+            json.dump(self.__already_downloaded, f)
         with open(f"{save_path}", mode="w", encoding="utf-8-sig") as f:
             json.dump(submission_data, f)
 
     def save_images_from_subreddit(self, subreddits: Tuple[str] = ("memes",), amount: int = 5,
-                                   filetypes: Tuple[str] = ("jpg", "png", "gif"), nsfw: bool = False,
-                                   scale: tuple = None, replace_resized: bool = True) -> None:
+                                   filetypes: tuple = ("jpg", "png"), nsfw: bool = False,
+                                   scale: tuple = None, replace_resized: bool = True) -> List[dict]:
         """Save images from multiple subreddits.
 
         :param subreddits: Tuple of strings that contain subreddit names (by default, will search for the /r/memes
                 subreddit)
         :param amount: amount of posts to query by subreddit. 5 by default.
-        :param filetypes: a tuple of accepted file types. By default : ("jpg", "png", "gif"). Warning ! Using other file
-                types than those 3 may cause exceptions. That functionality haven't been tested. Its use is mainly to
+        :param filetypes: a tuple of accepted file types. By default, : ("jpg", "png"). Warning ! Using other file
+                types than those 2 may cause exceptions. That functionality hasn't been tested. Its use is mainly to
                 restrain queries to one or two of the default types.
         :param nsfw: True for NSFW posts only, False for SFW posts only. False by default
         :param scale: a tuple (width: int, height: int) you can pass with the new width/height (in pixel) for each image
                 downloaded. None by default
-        :param replace_resized: used if a scale is passed. If True it will replace the images, if False it will create a
+        :param replace_resized: used if a scale is passed. If True it replaces the images, if False it will create a
                 new directory with resized images. True by default
-        :return: None
+        :return: data queried
         """
 
         for subreddit in subreddits:
             save_path = self.__create_subreddit_folder(subreddit)
-            if self.__log:
+            if self._log:
                 print(f"Search for images on the {subreddit} subreddit...")
             submissions = self.__get_posts_from_subreddit(subreddit, nsfw, amount, filetypes)
-            if self.__log:
+            if self._log:
                 print("Images found ! start downloading them...")
             for submission in submissions:
                 image_path = f"{save_path}\\images\\{submission.id}{submission.url.lower()[-4:]}"
                 self.__save_submission_image(image_path, submission, scale, replace_resized)
                 self.__save_submission_data(f"{save_path}\\data\\{submission.id}.json", image_path, submission)
-                if self.__log:
-                    print(f"image downloaded from /r/{subreddit}.")
-            if self.__log:
+            if self._log:
                 print(f"{len(submissions)} images from /r/{subreddit} have been downloaded.")
-        if self.__log:
+        if self._log:
             print(f"Download finished for the following subreddit(s) : {', '.join(subreddits)}.")
+
+        return self.__submission_data
+
+    def create_video(self, video_data: List[dict] = None):
+        """Create a video with the images previously saved from reddit.
+
+        :param video_data: Optional Video data returned by .save_images_from_subreddit. If nothing passed it will
+                use the last posts queried from reddit.
+        :return: the path to the created video
+        """
+        return self._create_video(video_data if video_data else self.__submission_data)
+
+    @staticmethod
+    def get_path_images(data: List[dict] = None):
+        """Return a list oh paths for the data passed
+
+        :param data: data queried with .save_images_from_subreddit()
+        :return: a list of path
+        """
+        return [i["image_path"] for i in data]
+
+    def publish_on(self, social_media: int, media_path: str) -> None:
+        """Publish a video or an image on a social media
+
+        :param social_media: use utils.SocialMedias.TheSocialMediaYouWant
+        :param media_path: path to image an image or a video
+        :return: None
+        """
+        if social_media == 0:
+            self._youtube(media_path)
+            return
+
+        if social_media == 1:
+            # TODO: implement TikTok
+            print("Not implemented yet")
+            return
+
+        if social_media == 2:
+            # TODO: implement Instagram
+            print("Not implemented yet")
+            return
+
+        print("Not implemented yet")
+        # TODO: implement Snapchat

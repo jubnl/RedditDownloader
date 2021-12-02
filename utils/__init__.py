@@ -5,6 +5,8 @@ class Scales:
     """Some known format are already defined here. You can use them by importing Scales from utils.
 
     """
+    Default = None
+
     # youtube format
     YoutubeShortsFullscreen = (1080, 1920)
     YoutubeShortsSquare = (1080, 1080)
@@ -23,6 +25,16 @@ class Scales:
     InstagramVideoSquare = InstagramPhotoSquare
     InstagramVideoLandscape = (1080, 608)
     InstagramVideoPortrait = InstagramPhotoPortrait
+
+    # snapchat format
+    Snapchat = YoutubeShortsFullscreen
+
+
+class SocialMedias:
+    YouTube = 0
+    TikTok = 1
+    InstaGram = 2
+    SnapChat = 3
 
 
 def get_credentials():
