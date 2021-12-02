@@ -1,9 +1,20 @@
 from RedditDownloader import RedditBot
-from utils import get_credentials, Scales
+from utils import SocialMedias, get_credentials, Scales
 
-redditbot = RedditBot(get_credentials())
-redditbot.save_images_from_subreddit(
-    scale=Scales.YoutubeShortsFullscreen,
-    replace_resized=False,
-    amount=1
+reddit = RedditBot(get_credentials())
+data = reddit.save_images_from_subreddit(
+    amount=1,
+    subreddits=("FoodPorn",),
+    scale=Scales.InstagramPhotoSquare
 )
+video_path = reddit.create_video(data)
+
+ytb_data = {
+    "file": video_path,
+    "title": "#short \n Memes but this time you laugh for real",
+    "description": "why tho",
+    "keywords": "meme,memes,laugh,internet,short",
+    "privacyStatus": "public"
+}
+
+reddit.publish_on(SocialMedias.YouTube, ytb_data)

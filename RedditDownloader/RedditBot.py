@@ -3,6 +3,7 @@ import os
 from datetime import date
 from typing import List, Tuple
 
+import media as media
 import praw
 import requests
 from environs import Env
@@ -200,7 +201,7 @@ class RedditBot(Scale, CreateMovie, YtbPublisher):
             data = self.__submission_data
         return [i["image_path"] for i in data]
 
-    def publish_on(self, social_media: int, media_data: List[dict]) -> None:
+    def publish_on(self, social_media: int, media_data: dict) -> None:
         """Publish a video or an image on a social media
 
         :param social_media: use utils.SocialMedias.TheSocialMediaYouWant
@@ -208,8 +209,7 @@ class RedditBot(Scale, CreateMovie, YtbPublisher):
         :return: None
         """
         if social_media == 0:
-            for data in media_data:
-                self._youtube(data)
+            self._youtube(media_data)
             return
 
         if social_media == 1:
