@@ -1,8 +1,10 @@
 from RedditDownloader import RedditBot
-from utils import SocialMedias, get_credentials
+from utils import SocialMedias, get_credentials, initialize
+
+
 
 reddit = RedditBot(get_credentials(), log=True)
-data = reddit.save_images_from_subreddit()
+data = reddit.save_images_from_subreddit(amount=1)
 video_path = reddit.create_video(data)
 
 ytb_data = {

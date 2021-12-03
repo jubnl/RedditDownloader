@@ -9,7 +9,9 @@ from environs import Env
 
 from MovieMaker import CreateMovie
 from Publishers import YtbPublisher
+from RedditDownloaderExceptions import MissingCredentialsException, IncorrectCredentialsException
 from .ScaleImages import Scale
+from prawcore import ResponseException
 
 
 class RedditBot(Scale, CreateMovie, YtbPublisher):
@@ -23,10 +25,18 @@ class RedditBot(Scale, CreateMovie, YtbPublisher):
 
         # init parent classes
         Scale.__init__(self)
-        CreateMovie.__init__(self, base_path)
+        CreateMovie.__init__(self, env, base_path)
         YtbPublisher.__init__(self, env)
 
         self._log = log
+
+        # Check if credentials exists
+        if not env("REDDIT_CLIENT_ID"):
+            raise MissingCredentialsException("REDDIT_CLIENT_ID")
+        if not env("REDDIT_CLIENT_SECRET"):
+            raise MissingCredentialsException("REDDIT_CLIENT_SECRET")
+        if not env("REDDIT_USER_AGENT"):
+            raise MissingCredentialsException("REDDIT_USER_AGENT")
 
         # connect to reddit
         self.__reddit = praw.Reddit(
@@ -34,6 +44,12 @@ class RedditBot(Scale, CreateMovie, YtbPublisher):
             client_secret=env("REDDIT_CLIENT_SECRET"),
             user_agent=env("REDDIT_USER_AGENT")
         )
+
+        try:
+            self.__reddit.user.me()
+        except ResponseException:
+            raise IncorrectCredentialsException()
+
 
         # define image format that we want to query
         self.__accepted_format = ["jpg", "png", "gif"]

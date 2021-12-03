@@ -1,5 +1,9 @@
-from environs import Env
+import os
 from pprint import pprint
+
+from environs import Env
+
+from RedditDownloader import RedditBot
 
 
 class Scales:
@@ -50,3 +54,9 @@ def get_credentials():
     env = Env()
     env.read_env()
     return env
+
+
+def initialize(base_path: str = os.getcwd()):
+    RedditBot(get_credentials(), base_path)
+    print("Application initialized !")
+    exit()

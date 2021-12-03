@@ -1,28 +1,43 @@
 import os.path
+import platform
 import random
+from pathlib import Path
 from secrets import token_hex
 from typing import List
 
+from environs import Env
 from moviepy.audio.AudioClip import CompositeAudioClip
 from moviepy.editor import ImageSequenceClip, VideoFileClip, concatenate_videoclips, TextClip, AudioFileClip
 from moviepy.video.compositing.CompositeVideoClip import CompositeVideoClip
 
+from RedditDownloaderExceptions import MissingImageMagickBinariesException, MissingMP3FilesInMusicsDir
 from .utils import Utils
 
 
 class CreateMovie(Utils):
-    def __init__(self, base_path: str):
+    def __init__(self, env: Env, base_path: str):
         Utils.__init__(self)
+        self.__env = env
         self.__path = base_path
         self.__music_path = os.path.join(self.__path, "musics\\")
         self.__video_path = os.path.join(self.__path, "videos\\")
         if not os.path.isdir(self.__video_path):
             os.mkdir(self.__video_path)
+
         if not os.path.isdir(self.__music_path):
             os.mkdir(self.__music_path)
-            print(f"WARNING : There are no mp3 files in {self.__music_path}. Please add some mp3 files.")
 
     def _create_video(self, submission_data: List[dict]) -> str:
+
+        # check if magick binaries exists if on windows
+        if platform.system() == "Windows" and (
+                not self.__env("IMAGEMAGICK_BINARY") or not os.path.isfile(self.__env("IMAGEMAGICK_BINARY"))):
+            raise MissingImageMagickBinariesException(self.__env("IMAGEMAGICK_BINARY"))
+
+        # check if there's music inside the musics dir
+        if not list(Path(self.__music_path).rglob(".mp3")):
+            raise MissingMP3FilesInMusicsDir(self.__music_path)
+
         clips = []
         for submission in submission_data:
             if "gif" not in submission["image_path"][-3:]:
