@@ -21,11 +21,12 @@ class Utils(object):
         need_return = 30
         new_comment = ""
         return_added = 0
-        return_added += comment.count('\n')
-        for i, letter in enumerate(comment):
-            if i > need_return and letter == " ":
-                letter = "\n"
-                need_return += 30
-                return_added += 1
-            new_comment += letter
+        if comment:
+            return_added += comment.count('\n')
+            for i, letter in enumerate(comment):
+                if i > need_return and letter == " ":
+                    letter = "\n"
+                    need_return += 30
+                    return_added += 1
+                new_comment += letter
         return new_comment, return_added

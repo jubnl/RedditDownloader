@@ -3,7 +3,6 @@ import os
 from datetime import date
 from typing import List, Tuple
 
-import media as media
 import praw
 import requests
 from environs import Env
@@ -25,7 +24,7 @@ class RedditBot(Scale, CreateMovie, YtbPublisher):
         # init parent classes
         Scale.__init__(self)
         CreateMovie.__init__(self, base_path)
-        YtbPublisher.__init__(self)
+        YtbPublisher.__init__(self, env)
 
         self._log = log
 

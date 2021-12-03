@@ -1,20 +1,16 @@
 from RedditDownloader import RedditBot
-from utils import SocialMedias, get_credentials, Scales
+from utils import SocialMedias, get_credentials
 
-reddit = RedditBot(get_credentials())
-data = reddit.save_images_from_subreddit(
-    amount=5,
-    subreddits=("dankmemes",),
-    scale=Scales.InstagramPhotoSquare
-)
+reddit = RedditBot(get_credentials(), log=True)
+data = reddit.save_images_from_subreddit()
 video_path = reddit.create_video(data)
 
 ytb_data = {
     "file": video_path,
-    "title": "#short \n Memes but this time you laugh for real",
+    "title": "#shorts r/cursedcomments",
     "description": "why tho",
-    "keywords": "meme,memes,laugh,internet,short",
-    "privacyStatus": "public"
+    "keywords": "meme,memes,laugh,internet,short,reddit",
+    "privacyStatus": "unlisted"
 }
 
 reddit.publish_on(SocialMedias.YouTube, ytb_data)
